@@ -2,6 +2,14 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 
+class Module:
+    """Base class for all modules (layers, activations, etc.)"""
+    def forward(self, input:np.ndarray):
+        raise NotImplementedError
+
+    def backward(self, grad_output):
+        raise NotImplementedError
+
 def task_1_1_solution():
     img = cv.imread('images/task_1_1_solution.png')
     plt.axis('off')
@@ -20,8 +28,21 @@ def task_1_3_solution():
     plt.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
 
 def test_ReLU(relu):
+    class ReLU(Module):
+        """ReLU activation function"""
+        def forward(self, input):
+            self.input = input.copy()
+            return np.maximum(0., input)
+        
+        def backward(self, grad_output):
+            grad_input = grad_output.copy()
+            grad_input[self.input <= 0] = 0
+            return grad_input
+        
+    relu_target = ReLU()
+    
     x = np.linspace(-1, 1, 20)
-    expected_forward = np.maximum(0, x)
+    expected_forward = relu_target.forward(x)
     forward_output = relu.forward(x)
     if not np.array_equal(forward_output, expected_forward):
         print(f"❌ ReLU Vorwärtspropagation fehlgeschlagen.\ninput:\n{x},\nerwartete Ausgabe:\n{expected_forward},\nerhaltene Ausgabe:\n{forward_output}")
@@ -29,10 +50,8 @@ def test_ReLU(relu):
         print("✅ ReLU Vorwärtspropagation erfolgreich")
 
     grad_output = x.copy()
-    expected_backward = x.copy()
-    expected_backward[x <= 0] = 0
-    #expected_backward[x > 0] = 1
-    backward_output = relu.backward(x)
+    expected_backward = relu_target.backward(grad_output)
+    backward_output = relu.backward(grad_output)
     if not np.array_equal(backward_output, expected_backward):
         print(f"❌ ReLU Rückwärtspropagation fehlgeschlagen.\ngrad_output:\n{grad_output},\nerwartete Ausgabe:\n{expected_backward},\nerhaltene Ausgabe:\n{backward_output}")
     else:
@@ -40,7 +59,7 @@ def test_ReLU(relu):
 
     z = np.linspace(-1, 1, 500)
     g_z = relu.forward(z)
-    grad_g_z = relu.backward(z)
+    grad_g_z = relu.backward(np.ones_like(z))
     grad_g_z[grad_g_z != 0] = 1
     plt.plot(z, g_z, label="$g(z)$", color='blue')
     plt.plot(z, grad_g_z, label="$g'(z)$", color='red')
@@ -53,8 +72,19 @@ def test_ReLU(relu):
     plt.show()
 
 def test_sigmoid(sigmoid):
+    class Sigmoid(Module):
+        """Sigmoid activation function"""
+        def forward(self, input):
+            self.output = 1 / (1 + np.exp(-input))
+            return self.output
+        
+        def backward(self, grad_output):
+            return grad_output * (self.output * (1 - self.output))
+        
+    sigmoid_target = Sigmoid()
+    
     x = np.linspace(-1, 1, 20)
-    expected_forward = 1 / (1 + np.exp(-x))
+    expected_forward = sigmoid_target.forward(x)
     forward_output = sigmoid.forward(x)
     if not np.allclose(forward_output, expected_forward):
         print(f"❌ Sigmoid Vorwärtspropagation fehlgeschlagen.\ninput:\n{x},\nerwartete Ausgabe:\n{expected_forward},\nerhaltene Ausgabe:\n{forward_output}")
@@ -62,7 +92,7 @@ def test_sigmoid(sigmoid):
         print("✅ Sigmoid Vorwärtspropagation erfolgreich")
 
     grad_output = np.linspace(-1, 1, 20)
-    expected_backward = grad_output * (forward_output * (1 - forward_output))
+    expected_backward = sigmoid_target.backward(grad_output)
     backward_output = sigmoid.backward(grad_output)
     if not np.allclose(backward_output, expected_backward):
         print(f"❌ Sigmoid Rückwärtspropagation fehlgeschlagen.\ngrad_output:\n{grad_output},\nerwartete Ausgabe:\n{expected_backward},\nerhaltene Ausgabe:\n{backward_output}")
@@ -88,8 +118,19 @@ def test_sigmoid(sigmoid):
     plt.show()
 
 def test_tanh(tanh):
+    class Tanh(Module):
+        """Tanh activation function"""
+        def forward(self, input):
+            self.output = np.tanh(input)
+            return self.output
+        
+        def backward(self, grad_output):
+            return grad_output * (1 - self.output ** 2)
+        
+    tanh_target = Tanh()
+
     x = np.linspace(-1, 1, 20)
-    expected_forward = np.tanh(x)
+    expected_forward = tanh_target.forward(x)
     forward_output = tanh.forward(x)
     if not np.allclose(forward_output, expected_forward):
         print(f"❌ Tanh Vorwärtspropagation fehlgeschlagen.\ninput:\n{x},\nerwartete Ausgabe:\n{expected_forward},\nerhaltene Ausgabe:\n{forward_output}")
@@ -97,7 +138,7 @@ def test_tanh(tanh):
         print("✅ Tanh Vorwärtspropagation erfolgreich")
 
     grad_output = np.linspace(-1, 1, 20)
-    expected_backward = grad_output * (1 - forward_output ** 2)
+    expected_backward = tanh_target.backward(grad_output)
     backward_output = tanh.backward(grad_output)
     if not np.allclose(backward_output, expected_backward):
         print(f"❌ Tanh Rückwärtspropagation fehlgeschlagen.\ngrad_output:\n{grad_output},\nerwartete Ausgabe:\n{expected_backward},\nerhaltene Ausgabe:\n{backward_output}")
