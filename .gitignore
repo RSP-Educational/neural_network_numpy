@@ -208,3 +208,6 @@ __marimo__/
 .DS_Store
 /test.py
 data/
+main.html
+.gitignore
+main.pdf
